@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 """判据原型：把「机器上的事实」对上 `profiles/` 里的 recognize 规则。
 
-    python3.12 scripts/recognize.py --docker        # 对本机运行中的容器跑一遍
-    python3.12 scripts/recognize.py --docker --all  # 连未命中的容器一起列出
+    python3.12 scripts/dev/recognize.py --docker        # 对本机运行中的容器跑一遍
+    python3.12 scripts/dev/recognize.py --docker --all  # 连未命中的容器一起列出
+
+**这是 dev 工具，不是发布链路的一部分**（需要本机 Docker，扫的是运行中的容器）。
+用途：改了 `products/` 的判据后，用它回归一遍「还能不能认出真实镜像」。
 
 **这是 spike，不是成品。** 目的只有一个：用真实环境验证「产品固有 + 部署画像」这个形状。
 已知不做的事：
@@ -23,7 +26,7 @@ import sys
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 PROFILES = ROOT / "profiles"
 PRODUCTS = ROOT / "products"
 

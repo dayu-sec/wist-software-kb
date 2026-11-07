@@ -21,7 +21,9 @@ products/<product>.toml         # curated：产品固有（权威名 + 类别 + 
 profiles/<product>/<form>.toml  # curated：部署画像（认出之后怎么管）—— 见 profiles/README.md
 advisories/<source>/…           # curated：人工修正、供应商公告
 bulk/                           # 上游镜像分片（机器生成，别手改）
-scripts/                        # validate.py / package.sh / gen-signing-key.sh / recognize.py
+scripts/                        # validate.py / package.sh / gen-signing-key.sh
+scripts/dev/recognize.py        # dev 工具：改判据后对真实镜像做回归（需要 Docker）
+docs/                           # 决策记录（spike-2026-11.md）
 keys/                           # 内容签名公钥（私钥只在 CI secret）
 _gal/                           # gx 工作区：gx adm v_patch | v_feat | tag_alpha | tag_beta | tag_stable
 ```
@@ -80,7 +82,7 @@ profiles    11（measured 10）
 没验到的逐条写在 `unverified` 里，不然字段就变成安慰剂了。
 
 完整字段与纪律见 [`profiles/README.md`](profiles/README.md)；
-10 个产品的实测结果见 [`SPIKE.md`](SPIKE.md)。
+模型为什么长成现在这样、以及 10 个产品的实测结果，见 [`docs/spike-2026-11.md`](docs/spike-2026-11.md)。
 
 ## 两级
 
