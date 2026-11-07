@@ -17,16 +17,18 @@ wist 的**软件知识库**——产品、版本、外部标识、漏洞公告�
 ```text
 version.txt                     # 版本权威（gx adm v_patch / v_feat 改它，tag 也取它）
 kb.toml                         # schema_version / kb_version / 数据源与许可证
-products/<eco>/<product>.toml   # curated：产品固有（权威名 + 类别 + 识别判据）
+products/<product>.toml         # curated：产品固有（权威名 + 类别 + 识别判据）
 profiles/<product>/<form>.toml  # curated：部署画像（认出之后怎么管）—— 见 profiles/README.md
 advisories/<source>/…           # curated：人工修正、供应商公告
-bulk/                           # bulk：OSV / NVD / 发行版 JSON 分片（CI 生成，别手改）
-schemas/                        # 文件格式（JSON Schema）
-examples/                       # 格式示例（不参与校验与打包）
-scripts/                        # validate.py / package.sh / gen-signing-key.sh
+bulk/                           # 上游镜像分片（机器生成，别手改）
+scripts/                        # validate.py / package.sh / gen-signing-key.sh / recognize.py
 keys/                           # 内容签名公钥（私钥只在 CI secret）
 _gal/                           # gx 工作区：gx adm v_patch | v_feat | tag_alpha | tag_beta | tag_stable
 ```
+
+> 没有 `schemas/` 和 `examples/`（2026-11-07 删）。
+> 前者过期且无人使用，后者会随模型变而腐化 —— **闸门 `scripts/validate.py` 是唯一事实来源**，
+> 新加产品直接照 `products/nginx.toml` 抄（真实文件有 CI 守着）。
 
 本地入口是 `Makefile`：`make validate` / `make dry-run` / `make pack`（详见下方 CI 一节）。
 
@@ -91,12 +93,13 @@ profiles    11（measured 10）
 
 ## 提交一个新软件
 
-1. 加 `products/<ecosystem>/<product>.toml`（照 `examples/product.toml`）；
+1. 加 `products/<product>.toml`（照 `products/nginx.toml` 抄 —— 真实文件有 CI 守着，不会腐化）；
 2. 先定 **`canonical_id` = `<vendor>/<name>`**（小写，如 `f5/nginx`）——**这是产品的权威名**；
 3. `product_id` = `sha256:` + `sha256(canonical_id)[:32]`，校验脚本会重算比对，不一致直接失败；
 4. purl / CPE **全部是别名**，只进 `external_ids`，**不参与 id 派生**；
-5. `python3.12 scripts/validate.py`（或 `make validate`）；
-6. PR。
+5. 需要的话再加 `profiles/<product>/default.toml`（照 `profiles/README.md`）；
+6. `python3.12 scripts/validate.py`（或 `make validate`）；
+7. PR。
 
 > 为什么权威名不是 purl：purl 是「包在某个生态里的坐标」。同一个产品在不同生态里名字不同
 > （Debian 叫 `redis-server`、Alpine 叫 `redis`），而自研/无发行版打包的软件根本没有 purl

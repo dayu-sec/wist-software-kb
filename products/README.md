@@ -3,7 +3,7 @@
 一个文件 = **一个产品**（跨环境、跨装法都成立的那部分）。
 
 ```text
-products/<ecosystem>/<product>.toml
+products/<product>.toml
 ```
 
 它回答「这是谁、叫什么、干什么、怎么认」。**不回答**「在这个环境里怎么管」—— 那是 `profiles/`。

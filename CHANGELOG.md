@@ -10,7 +10,7 @@
 ### 新增
 
 - 仓结构：`products/`（curated 产品）、`advisories/`（curated 公告修正）、`bulk/`（CI 拉的原始分片）、
-  `schemas/`、`examples/`、`scripts/`、`keys/`。
+  `scripts/`、`keys/`。
 - 两个示范产品：`nginx`（deb）、`postgresql`（deb）。`product_id` 由 purl 确定性派生，
   不是手写编号。
 - `scripts/validate.py`：schema、引用完整性、区间语法、`product_id` 重算一致性、体量（GitHub 硬限）。

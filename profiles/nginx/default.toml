@@ -1,5 +1,5 @@
 # nginx —— 通用部署画像（systemd / 容器首进程都适用）
-# 说明：**识别判据不在这里**，在 `products/deb/nginx.toml`（产品固有）。
+# 说明：**识别判据不在这里**，在 `products/nginx.toml`（产品固有）。
 # profile 只回答「认出之后怎么管」，这部分才随部署形态变。
 product_id = "sha256:32c8d72f8c61e1b39fe3897cfb6c8815"
 form       = "default"
