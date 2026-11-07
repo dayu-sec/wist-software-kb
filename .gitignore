@@ -1,0 +1,16 @@
+# 打包产物
+/dist
+
+# 签名私钥绝不进仓（只在 CI secret `KB_SIGNING_KEY`；公钥 keys/*.pub.pem 要提交）
+keys/*.pem
+!keys/*.pub.pem
+
+# 本地脚本产物
+__pycache__/
+*.pyc
+
+# gx 工作区报告
+.report
+.run*
+
+.DS_Store

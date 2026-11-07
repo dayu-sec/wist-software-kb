@@ -1,0 +1,90 @@
+name: Release
+
+# 打 tag 即发制品（三通道：`vX.Y.Z-alpha` / `vX.Y.Z-beta` / `vX.Y.Z`）。
+# 版本取自 tag 名（去 `v`），**核心版本**要与 `version.txt` 核对 —— 不一致直接失败（见 scripts/package.sh）。
+# alpha / beta 标为 prerelease；stable 才是正式版。
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Channel vs branch（提示，不拦）
+        # 通道约定：-alpha 从 alpha 分支、-beta 从 beta、stable 从 main。
+        # 只提醒不失败：仓刚建分支 / 临时补发时不至于发不出去。
+        run: |
+          set -eu
+          case "${GITHUB_REF_NAME}" in
+            *-alpha) expected=alpha ;;
+            *-beta) expected=beta ;;
+            *) expected=main ;;
+          esac
+          if git fetch --quiet origin "+refs/heads/*:refs/remotes/origin/*" 2>/dev/null \
+            && git branch -r --contains "${GITHUB_SHA}" | grep -q "origin/${expected}$"; then
+            echo "tag ${GITHUB_REF_NAME} 来自 ${expected} 分支"
+          else
+            echo "::warning::tag ${GITHUB_REF_NAME} 的提交不在 origin/${expected} 上（通道与分支不一致）"
+          fi
+
+      - name: Validate
+        run: python3 scripts/validate.py
+
+      - name: Package knowledge base
+        env:
+          # 发布侧私钥（只在 CI secret 里）。没配就产出**未签名**包 —— 配了公钥的消费方会拒收。
+          KB_SIGNING_KEY_PEM: ${{ secrets.KB_SIGNING_KEY }}
+        run: |
+          set -eu
+          if [ -n "${KB_SIGNING_KEY_PEM}" ]; then
+            printf '%s\n' "${KB_SIGNING_KEY_PEM}" > "${RUNNER_TEMP}/kb-signing.pem"
+            chmod 600 "${RUNNER_TEMP}/kb-signing.pem"
+            export KB_SIGNING_KEY="${RUNNER_TEMP}/kb-signing.pem"
+          else
+            echo "::warning::KB_SIGNING_KEY 未配置 —— 本次发布的包**没有签名**"
+          fi
+          ./scripts/package.sh --version "${GITHUB_REF_NAME#v}" --out dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: wist-software-kb-${{ github.ref_name }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    name: Release
+    needs: [package]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: dist
+          pattern: wist-software-kb-*
+          merge-multiple: true
+
+      - name: Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          # alpha / beta 是预发布（不占 “latest”）；只有 stable 才是正式版。
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
+          generate_release_notes: true
+          files: dist/*

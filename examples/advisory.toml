@@ -1,0 +1,23 @@
+# 格式示例：curated advisory（**不参与校验与打包**，放在 examples/ 下）
+#
+# 为什么是示例：真实公告必须来自真实数据源，不能编。curated 层的作用是**修正/补充**
+# bulk 层（OSV / NVD / 发行版 tracker）里不准的区间或缺失的映射。
+#
+# 放进 advisories/<source>/<osv_id>.toml 时：
+#   - `osv_id` 必须能对上 bulk 里那条（否则是"我们自己发明了一条公告"，PR 要说明理由）；
+#   - `source = "curated"` 表示人工修订。
+osv_id      = "GHSA-xxxx-xxxx-xxxx"
+aliases     = ["CVE-2024-00000"]
+product_id  = "sha256:808ec29dcf2e9c2c703a046c7d1bd276"
+ecosystem   = "Debian:12"
+source      = "curated"
+
+# 区间用 OSV 语义：introduced / fixed / last_affected
+affected = [{ introduced = "1.18.0", fixed = "1.24.0-1" }]
+
+severity   = ["CVSS_V3:CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"]
+
+# 只存链接，不转存漏洞描述全文（合规 + 体量）
+references = ["https://github.com/advisories/GHSA-xxxx-xxxx-xxxx"]
+
+note = "发行版回移了补丁，上游 OSV 的区间在这里不适用"

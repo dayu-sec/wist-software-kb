@@ -1,0 +1,25 @@
+# 知识库元信息
+#
+# `schema_version`：文件格式版本，消费方导入前必须兼容；不兼容的包一律拒收。
+# `kb_version`：仓里的"当前开发版本"。**包里真正的 kb_version 在 manifest.json**
+#               （= 包版本 + 内容 hash，由 scripts/package.sh 生成）—— 内容变了就必须换版本，
+#               否则下游无法判断两次导入是不是同一份。本字段只做人工可读的提示。
+schema_version = 1
+kb_version     = "0.1.0"
+name           = "wist-software-kb"
+
+# bulk 层的数据源。只列**我们真的会拉**的源；curated 层由 PR 维护，不属于任何源。
+# 许可证按源记录：转存全文的合规成本远高于存 id + 区间 + 链接。
+[sources.osv]
+url     = "https://github.com/ossf/osv-schema"
+license = "per-source"
+note    = "OSV 格式与聚合（GitHub Advisory DB / PyPI / Go / RustSec / 发行版）"
+
+[sources.nvd]
+url     = "https://nvd.nist.gov/"
+license = "public-domain-us-government"
+
+[sources.github_advisory]
+url     = "https://github.com/github/advisory-database"
+license = "CC-BY-4.0"
+note    = "署名要求：转存需保留来源"

@@ -1,0 +1,18 @@
+extern mod ver { path = "@{PATH}"; }
+
+mod envs  {
+  #[usage(desp="default mamcos", color="green")]
+  env default     {
+
+  }
+}
+
+mod main  {
+
+    #[auto_load(entry)]
+    flow __into | conf {
+    }
+    #[task(name="config")]
+    flow conf  {
+    }
+}

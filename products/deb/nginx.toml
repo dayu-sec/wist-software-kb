@@ -1,0 +1,17 @@
+# nginx（Debian/Ubuntu 打包）
+#
+# product_id = "sha256:" + sha256(规范化 purl 去版本)[:32]
+#   规范化：去 `@版本`、去 `?qualifiers`、全小写。scripts/validate.py 会重算比对。
+product_id      = "sha256:808ec29dcf2e9c2c703a046c7d1bd276"
+canonical_name  = "nginx"
+vendor          = "F5"
+package_type    = "deb"
+homepage        = "https://nginx.org/"
+lifecycle_state = "supported"
+
+aliases = ["NGINX", "nginx"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:deb/debian/nginx" },
+  { kind = "cpe", value = "cpe:2.3:a:f5:nginx" },
+]

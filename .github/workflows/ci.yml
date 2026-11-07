@@ -1,0 +1,32 @@
+name: CI
+
+# 门禁：TOML 能解析、引用对得上、product_id 重算一致、区间语法合法、体量没超限，
+# 并且能按 `version.txt` 打出一个包。
+# **不含**签名 —— 私钥只在 release.yml 的 secret (`KB_SIGNING_KEY`) 里。
+on:
+  push:
+    branches: [alpha, beta, main]
+  pull_request:
+    branches: [alpha, beta, main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Shell syntax
+        run: bash -n scripts/*.sh
+
+      - name: Validate
+        # ubuntu-24.04 自带 Python 3.12（validate.py 要 3.11+ 的 tomllib）。
+        run: python3 scripts/validate.py
+
+      - name: Pack (dry run)
+        # 只验证「按当前内容能打出一个包」，不落盘、不签名。
+        run: ./scripts/package.sh --dry-run

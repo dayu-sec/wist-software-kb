@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dayu-sec/wist-software-kb/schemas/product.schema.json",
+  "title": "software product (curated)",
+  "type": "object",
+  "required": ["product_id", "canonical_name", "package_type", "external_ids"],
+  "additionalProperties": false,
+  "properties": {
+    "product_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{32}$",
+      "description": "确定性 id：sha256(规范化 purl 去版本)[:32]。改名字/标识导致它变化 = 破坏性变更"
+    },
+    "canonical_name": { "type": "string", "minLength": 1 },
+    "vendor": { "type": ["string", "null"] },
+    "package_type": {
+      "type": "string",
+      "enum": ["deb", "rpm", "apk", "brew", "app", "npm", "pypi", "go", "cargo", "maven", "nuget", "gem", "unknown"]
+    },
+    "homepage": { "type": ["string", "null"] },
+    "lifecycle_state": {
+      "type": ["string", "null"],
+      "enum": ["supported", "maintenance", "eol", "unknown", null]
+    },
+    "aliases": { "type": "array", "items": { "type": "string" }, "default": [] },
+    "external_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "value"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["purl", "cpe", "swid", "vendor_product_id"] },
+          "value": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

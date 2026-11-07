@@ -1,0 +1,17 @@
+extern mod vfm { path = "@{PATH}"; }
+
+mod  envs {
+  env default {
+     ROOT= "./";
+  }
+}
+mod main   : sys_ver_adm {
+
+#[auto_load(entry)]
+  flow _entry : ver.use {
+  }
+
+  // 本仓发布的是**制品**（知识包），走 `alpha → beta → main` 三通道：
+  //   `gx adm tag_alpha` / `tag_beta` / `tag_stable` → `vX.Y.Z-alpha` / `-beta` / `vX.Y.Z`。
+  // 没有 `_set_ver`：版本权威就是 `version.txt`（tag 与它同名，没有 Cargo.toml 要同步）。
+}

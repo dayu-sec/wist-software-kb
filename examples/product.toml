@@ -1,0 +1,27 @@
+# 格式示例：curated 产品（**不参与校验与打包**，放在 examples/ 下）
+#
+# 真实产品放 products/<ecosystem>/<product>.toml（一个产品一个文件）。
+#
+# `product_id` 必须是**确定性 id**，不能手写编号：
+#   product_id = "sha256:" + sha256(规范化 purl 去版本)[:32]
+# 规范化 = 去 `@版本`、去 `?qualifiers`、全小写。
+#
+# 为什么这么严：客户域里的安装记录、漏洞命中都引用这个 id。id 一变，
+# 数百万条历史记录就悬空 —— 所以它必须能从 purl 重算出来（validate.py 会比对），
+# 也必须跟 purl 一起演进（改名走 `merged_into`，不是就地改）。
+product_id      = "sha256:808ec29dcf2e9c2c703a046c7d1bd276"
+canonical_name  = "nginx"
+vendor          = "F5"
+package_type    = "deb"
+homepage        = "https://nginx.org/"
+lifecycle_state = "supported"
+
+# 归一化要收得住：别名只写「确实指同一个产品」的写法，不写模糊营销名。
+aliases = ["NGINX"]
+
+# 外部标识是**桥梁**：上游漏洞库（OSV/NVD/发行版 tracker）说 purl 或 CPE，我们说 product_id。
+# 缺了桥就匹配不上漏洞，所以这是 PR 评审的重点。
+external_ids = [
+  { kind = "purl", value = "pkg:deb/debian/nginx" },
+  { kind = "cpe", value = "cpe:2.3:a:f5:nginx" },
+]
