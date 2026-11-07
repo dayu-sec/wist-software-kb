@@ -17,7 +17,8 @@ wist 的**软件知识库**——产品、版本、外部标识、漏洞公告�
 ```text
 version.txt                     # 版本权威（gx adm v_patch / v_feat 改它，tag 也取它）
 kb.toml                         # schema_version / kb_version / 数据源与许可证
-products/<eco>/<product>.toml   # curated：产品（归一后的身份，一对象一文件）
+products/<eco>/<product>.toml   # curated：产品固有（权威名 + 类别 + 识别判据）
+profiles/<product>/<form>.toml  # curated：部署画像（认出之后怎么管）—— 见 profiles/README.md
 advisories/<source>/…           # curated：人工修正、供应商公告
 bulk/                           # bulk：OSV / NVD / 发行版 JSON 分片（CI 生成，别手改）
 schemas/                        # 文件格式（JSON Schema）
@@ -28,6 +29,56 @@ _gal/                           # gx 工作区：gx adm v_patch | v_feat | tag_a
 ```
 
 本地入口是 `Makefile`：`make validate` / `make dry-run` / `make pack`（详见下方 CI 一节）。
+
+## 产品固有 vs 部署画像
+
+```
+products/  它是谁：canonical_id、功能类别（多值）、kind、默认端口、**识别判据**
+profiles/  怎么管：version_probe、bind_scope、upgrade_mode、config_paths、日志/指标面
+```
+
+分开的理由：同一个 postgres，systemd 上是 `restart`，k8s 里是滚动替换 Pod；
+这些不是产品属性，是环境属性。**判据则相反** —— `/usr/sbin/nginx` 换个装法也成立，所以留在产品层。
+
+> 这条是被实测逼出来的：把 `path`/`unit` 判据放进 profile 后，`nginx/deb`
+> 也命中了 Alpine 容器（因为路径本来就不随装法变）。
+
+### 识别判据（`[[recognize]]`）
+
+七类：`dpkg` / `apk` / `rpm` / `path` / `unit` / `container` / `image`，**每条带强度**：
+
+| 强度 | 典型用法 |
+| --- | --- |
+| `strong` | 精确包名、精确路径 —— 单独命中即可认定 |
+| `medium` | 含通配的路径、镜像名（子串）—— 需配合其他证据 |
+| `weak` | 容器名 —— 实测不可靠（同一镜像可叫 `metrics` / `vm`） |
+
+同一个观测（如 `dpkg:nginx`）**只能属于一个产品** —— 这是「一个产品裂成两条」的闸门。
+
+### 出处（`provenance`）
+
+每个产品必须老实标：
+
+| 值 | 含义 | 强制要求 |
+| --- | --- | --- |
+| `measured` | 至少一条判据在真实环境命中过 | `verified_on = ["<env>@YYYY-MM-DD"]` |
+| `vendor-doc` | 官方文档写明，未在现场验过 | `source_url` |
+| `inferred` | 按惯例推的，未核实 | 无，但 `validate.py` 每次都会列出来 |
+| — | （可选）`unverified` 列出本次没覆盖的判据 | 如 `["recognize.unit"]` |
+
+`validate.py` 会在头部打出可信度分母：
+
+```
+products    10
+profiles    11（measured 10）
+            判据级未验证：nginx[dpkg/unit]、openjdk[dpkg/rpm]、…
+```
+
+`measured` 只承诺「至少一条判据在真实环境命中过」，**不承诺每条都验过**；
+没验到的逐条写在 `unverified` 里，不然字段就变成安慰剂了。
+
+完整字段与纪律见 [`profiles/README.md`](profiles/README.md)；
+10 个产品的实测结果见 [`SPIKE.md`](SPIKE.md)。
 
 ## 两级
 
@@ -40,13 +91,20 @@ _gal/                           # gx 工作区：gx adm v_patch | v_feat | tag_a
 
 ## 提交一个新软件
 
-1. 加 `products/<ecosystem>/<vendor>/<product>.toml`（照 `examples/product.toml`）；
-2. `product_id` 用**确定性 id**：`sha256:` + `sha256(规范化 purl 去版本)[:32]`，校验脚本会重算比对；
-3. `python3.12 scripts/validate.py`（或 `make validate`）；
-4. PR。
+1. 加 `products/<ecosystem>/<product>.toml`（照 `examples/product.toml`）；
+2. 先定 **`canonical_id` = `<vendor>/<name>`**（小写，如 `f5/nginx`）——**这是产品的权威名**；
+3. `product_id` = `sha256:` + `sha256(canonical_id)[:32]`，校验脚本会重算比对，不一致直接失败；
+4. purl / CPE **全部是别名**，只进 `external_ids`，**不参与 id 派生**；
+5. `python3.12 scripts/validate.py`（或 `make validate`）；
+6. PR。
 
-**改 `canonical_name` / `external_ids` 会让 `product_id` 变化** —— 下游客户域的安装记录会悬空。
+> 为什么权威名不是 purl：purl 是「包在某个生态里的坐标」。同一个产品在不同生态里名字不同
+> （Debian 叫 `redis-server`、Alpine 叫 `redis`），而自研/无发行版打包的软件根本没有 purl
+> （只能手写 `pkg:generic/…`）。拿 purl 做权威，等于把主键交给「当初在数组里写了哪一条」。
+
+**改 `canonical_id` 会让 `product_id` 变化** —— 下游客户域的安装记录会悬空。
 这种变更必须显式声明（PR 标题带 `rename:`，并在描述里写清从旧 id 到新 id 的映射）。
+改 `external_ids` / `aliases` 不受影响（它们只是别名）。
 
 ## 打包与消费
 

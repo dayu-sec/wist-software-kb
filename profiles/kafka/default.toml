@@ -1,0 +1,21 @@
+product_id = "sha256:5645c2aa93a465e71d0d6c5eed906414"
+form       = "default"
+
+[version_probe]
+kind     = "path_regex"
+path     = "/opt/kafka/libs/kafka_*.jar"
+pattern  = "kafka_[0-9.]+-([0-9.]+)\\.jar"
+fallback = { kind = "image_tag" }
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "restart"      # 滚动升级，不能原地 reload
+config_paths       = ["/opt/kafka/config/server.properties", "/etc/kafka/server.properties"]
+data_paths         = ["/var/lib/kafka", "/opt/kafka/data"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

@@ -1,0 +1,52 @@
+# Elasticsearch
+#
+# tarball / 容器 / 发行版仓库（Elastic 自建 apt/yum 源，不是 Debian 官方包）。
+# 曾经写过 `requires = ["openjdk/openjdk"]` —— **已删除**：实测镜像自带 JDK
+# （`/usr/share/elasticsearch/jdk/bin/java`）。那属于 `bundles`（自带运行时），
+# 不是 `requires`（必须有外部提供）。两者在漏洞归属上完全不同，见 SPIKE.md §5。
+product_id      = "sha256:15d28e2042b09184f1b1957600e8a99d"
+canonical_id    = "elastic/elasticsearch"
+canonical_name  = "elasticsearch"
+vendor          = "Elastic"
+package_type    = "generic"
+homepage        = "https://www.elastic.co/elasticsearch"
+lifecycle_state = "supported"
+categories      = ["search", "database"]
+kind            = "daemon"
+default_ports   = [9200, 9300]
+
+
+provenance      = "measured"   # 实测：`elasticsearch:8.13.0` 里 /usr/share/elasticsearch/bin/elasticsearch 命中
+verified_on     = ["docker-image@2026-11-07"]
+unverified      = ["recognize.unit"]
+aliases = ["Elasticsearch", "elasticsearch"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:generic/elastic/elasticsearch" },
+  { kind = "purl", value = "pkg:oci/elastic/elasticsearch" },
+  { kind = "cpe", value = "cpe:2.3:a:elastic:elasticsearch" },
+]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/share/elasticsearch/bin/elasticsearch"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["elasticsearch"]
+strength = "medium"
+
+[[recognize]]
+kind     = "unit"
+values   = ["elasticsearch.service"]
+strength = "strong"
+
+# ── 自带运行时（bundles）─────────────────────────────────────────────
+# 实测：`elasticsearch:8.13.0` 自带 JDK 22（/usr/share/elasticsearch/jdk）。
+# 这个路径是产品专属的，任何「系统装的 JDK」判据都覆盖不到 —— 不声明就是静默盲区。
+[[bundles]]
+product = "openjdk/openjdk"
+probe   = { kind = "binary", command = ["/usr/share/elasticsearch/jdk/bin/java", "-version"], stderr = true }

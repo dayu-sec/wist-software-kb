@@ -1,0 +1,21 @@
+# nginx —— 通用部署画像（systemd / 容器首进程都适用）
+# 说明：**识别判据不在这里**，在 `products/deb/nginx.toml`（产品固有）。
+# profile 只回答「认出之后怎么管」，这部分才随部署形态变。
+product_id = "sha256:32c8d72f8c61e1b39fe3897cfb6c8815"
+form       = "default"
+
+[version_probe]
+kind     = "package"
+fallback = { kind = "binary", command = ["nginx", "-v"], stderr = true }
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "reload"       # nginx -s reload，不中断连接
+config_paths       = ["/etc/nginx/nginx.conf", "/etc/nginx/conf.d", "/etc/nginx/sites-enabled"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

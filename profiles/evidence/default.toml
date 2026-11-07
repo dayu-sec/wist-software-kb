@@ -1,0 +1,18 @@
+# wist-evidence —— 容器部署画像
+product_id = "sha256:09199582cd520d2a11e2addfc186c0af"
+form       = "container"
+
+[version_probe]
+kind = "image_tag"       # 没有包记录，版本只能来自发布 tag
+
+[runtime]
+bind_scope = "internal"
+
+[governance]
+upgrade_mode       = "rolling"
+config_paths       = []      # 配置来自环境变量 / 挂载
+requires_privilege = "none"  # 实测容器内为非 root（uid 999 / 10001）
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

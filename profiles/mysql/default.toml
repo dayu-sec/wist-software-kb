@@ -1,0 +1,20 @@
+product_id = "sha256:673ed655f7f4e237e97a94ce4a834063"
+form       = "default"
+
+[version_probe]
+kind     = "binary"
+command  = ["mysqld", "--version"]
+fallback = { kind = "package" }
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "restart"
+config_paths       = ["/etc/my.cnf", "/etc/mysql"]
+data_paths         = ["/var/lib/mysql"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["DatabaseService"]
+metric_faces = ["HostMetrics"]

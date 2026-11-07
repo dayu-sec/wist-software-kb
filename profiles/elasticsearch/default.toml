@@ -1,0 +1,19 @@
+product_id = "sha256:15d28e2042b09184f1b1957600e8a99d"
+form       = "default"
+
+[version_probe]
+kind     = "package"
+fallback = { kind = "image_tag" }
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "restart"
+config_paths       = ["/etc/elasticsearch/elasticsearch.yml", "/usr/share/elasticsearch/config/elasticsearch.yml"]
+data_paths         = ["/var/lib/elasticsearch", "/usr/share/elasticsearch/data"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

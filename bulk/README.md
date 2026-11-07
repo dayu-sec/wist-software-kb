@@ -1,11 +1,23 @@
 # bulk：机器灌的漏洞数据
 
-本目录由 `scripts/refresh-bulk.sh`（CI 定时任务）生成，**不要手改**——下次刷新会被覆盖。
+本目录由 `scripts/import-upstream.sh`（CI 定时任务）从上游**已整理好的产物**转换而来，
+**不做抓取**、**不手改**（下次刷新会被覆盖）。
+
+## 范围：窄而准（2026-11-07 拍定）
+
+**`bulk` 不是情报镜像。** 只导入「与已定义产品相关」的分片：
+
+- 判据来自 `products/` 的 `[[recognize]]`（dpkg / apk / rpm 的包名）；
+- 不相关的生态/年份分片直接不拉，也不入库；
+- 导致的结果：公告数量从「OSV 全量 25 万」降到「我们解释得了的那一块」。
+
+为什么不做全量：公告必须能落到 `product_id` 才能被图谱使用。全量导入的后果是
+大批记录永远没有归属（模型里也没有「未归属公告」这个概念），只是把指标做大。
+代价是放弃「我也存全量情报」这个卖点 —— 但那是情报库的定位，不是资产知识库的。
 
 | 子目录 | 内容 | 来源 |
 | --- | --- | --- |
 | `osv/<ecosystem>/<year>.jsonl` | OSV 记录（一行一条） | OSV 导出 / 各生态 advisory |
-| `nvd/<year>.jsonl` | NVD 记录（OSV 化后的必要字段） | NVD JSON feeds |
 | `distro/<distro>/<year>.jsonl` | 发行版安全 tracker | Alpine / Debian / Ubuntu / RHEL 系 |
 | `cpe/dictionary-<part>.jsonl` | CPE 字典（**只用于归一映射，不进 advisory**） | NIST CPE dictionary |
 

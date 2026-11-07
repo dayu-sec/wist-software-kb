@@ -1,0 +1,19 @@
+product_id = "sha256:e0b0479fa204d24a092d5e918203508f"
+form       = "default"
+
+[version_probe]
+kind     = "binary"
+command  = ["/victoria-metrics-prod", "-version"]
+fallback = { kind = "image_tag" }
+
+[runtime]
+bind_scope = "internal"
+
+[governance]
+upgrade_mode       = "restart"
+data_paths         = ["/victoria-metrics-data"]
+requires_privilege = "none"
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

@@ -1,0 +1,34 @@
+# wist-atlas —— 自有服务
+#
+# 实测：镜像 `dayu-sec/wist-atlas`，基镜像 Debian 12，
+# 二进制 `/usr/local/bin/wist-atlas`，**不在任何包里**（COPY 进去的）。
+product_id      = "sha256:f2224aa0a88bcf078b7a48ee2137faae"
+canonical_id    = "wist/atlas"
+canonical_name  = "wist-atlas"
+vendor          = "Wist"
+package_type    = "oci"
+lifecycle_state = "supported"
+categories      = ["application"]
+kind            = "daemon"
+default_ports   = []
+provenance      = "measured"
+verified_on     = ["docker-image@2026-11-07"]
+
+aliases = ["wist-atlas"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:oci/wist-atlas" },
+]
+
+# ── 识别判据（产品固有）───────────────────────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/wist-atlas"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["wist-atlas"]
+match    = "suffix"      # 否则 `wist-atlas` 会命中 `wist-atlas-web`
+strength = "medium"

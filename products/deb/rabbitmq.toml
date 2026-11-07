@@ -1,0 +1,42 @@
+# RabbitMQ
+#
+# 依赖 Erlang 运行时 —— 用来验证「一个软件依赖另一个软件」这条关系要不要进模型。
+product_id      = "sha256:78f02c007d9eb436a07668a262c0658f"
+canonical_id    = "broadcom/rabbitmq"
+canonical_name  = "rabbitmq"
+vendor          = "Broadcom (VMware)"
+package_type    = "deb"
+homepage        = "https://www.rabbitmq.com/"
+lifecycle_state = "supported"
+categories      = ["message-queue"]
+kind            = "daemon"
+default_ports   = [5672, 15672]
+
+
+provenance      = "measured"   # 实测：`rabbitmq:3` 里 /opt/rabbitmq/sbin/rabbitmq-server + 镜像名命中
+verified_on     = ["docker-image@2026-11-07"]
+unverified      = ["recognize.dpkg", "recognize.rpm", "recognize.unit"]
+aliases = ["RabbitMQ", "rabbitmq-server"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:deb/debian/rabbitmq-server" },
+  { kind = "purl", value = "pkg:rpm/rabbitmq/rabbitmq-server" },
+  { kind = "cpe", value = "cpe:2.3:a:broadcom:rabbitmq" },
+]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/opt/rabbitmq/sbin/rabbitmq-server", "/usr/sbin/rabbitmq-server"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["rabbitmq"]
+strength = "medium"
+
+[[recognize]]
+kind     = "unit"
+values   = ["rabbitmq-server.service"]
+strength = "strong"

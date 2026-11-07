@@ -1,0 +1,22 @@
+product_id = "sha256:78f02c007d9eb436a07668a262c0658f"
+form       = "default"
+
+[version_probe]
+# `rabbitmq-server --version` 会真把服务起起来，不能用 —— 从插件名读版本
+kind     = "path_regex"
+path     = "/opt/rabbitmq/plugins/rabbit_common-*"
+pattern  = "rabbit_common-([0-9.]+)$"
+fallback = { kind = "package" }
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "restart"
+config_paths       = ["/etc/rabbitmq/rabbitmq.conf", "/opt/rabbitmq/etc/rabbitmq/rabbitmq.conf"]
+data_paths         = ["/var/lib/rabbitmq"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

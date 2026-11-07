@@ -1,0 +1,44 @@
+# Redis
+#
+# 归一陷阱：Debian/Ubuntu 的包叫 `redis-server`，Alpine 叫 `redis`，
+# 官方镜像叫 `redis`，而 README 里的产品名是 `Redis`。三种写法是同一个产品。
+product_id      = "sha256:bf451cb8534506146c500b697ffc964a"
+canonical_id    = "redis/redis"
+canonical_name  = "redis"
+vendor          = "Redis Ltd."
+package_type    = "deb"
+homepage        = "https://redis.io/"
+lifecycle_state = "supported"
+categories      = ["cache"]
+kind            = "daemon"
+default_ports   = [6379]
+
+
+provenance      = "measured"   # 实测：`redis:7-alpine` 里 /usr/local/bin/redis-server + 镜像名命中（无 redis 包）
+verified_on     = ["docker-image@2026-11-07"]
+unverified      = ["recognize.dpkg", "recognize.rpm", "recognize.unit"]
+aliases = ["Redis", "redis-server", "redis"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:deb/debian/redis-server" },
+  { kind = "purl", value = "pkg:apk/alpine/redis" },
+  { kind = "purl", value = "pkg:oci/redis" },
+  { kind = "cpe", value = "cpe:2.3:a:redis:redis" },
+]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/redis-server", "/usr/bin/redis-server"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["redis"]
+strength = "medium"
+
+[[recognize]]
+kind     = "unit"
+values   = ["redis.service", "redis-server.service"]
+strength = "strong"

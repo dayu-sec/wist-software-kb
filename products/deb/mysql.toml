@@ -1,0 +1,42 @@
+# MySQL Server（Oracle）
+#
+# 与 postgresql 成对存在，用来验证：「同一类别下的两个产品，归一规则不能互相污染」。
+product_id      = "sha256:673ed655f7f4e237e97a94ce4a834063"
+canonical_id    = "oracle/mysql"
+canonical_name  = "mysql"
+vendor          = "Oracle"
+package_type    = "deb"
+homepage        = "https://www.mysql.com/"
+lifecycle_state = "supported"
+categories      = ["database"]
+kind            = "daemon"
+default_ports   = [3306]
+
+
+provenance      = "measured"   # 实测：`mysql:8`（Oracle Linux 9）里 rpm 包 + /usr/sbin/mysqld 命中
+verified_on     = ["docker-image@2026-11-07"]
+unverified      = ["recognize.dpkg", "recognize.unit"]
+aliases = ["MySQL", "MySQL Server"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:deb/debian/mysql-server" },
+  { kind = "purl", value = "pkg:rpm/mysql/mysql-server" },
+  { kind = "cpe", value = "cpe:2.3:a:oracle:mysql" },
+]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "rpm"
+values   = ["mysql-community-server*", "mysql-server"]
+strength = "strong"
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/sbin/mysqld"]
+strength = "strong"
+
+[[recognize]]
+kind     = "unit"
+values   = ["mysql.service", "mysqld.service"]
+strength = "strong"

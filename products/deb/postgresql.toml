@@ -2,16 +2,46 @@
 #
 # 与 nginx 同一形状：一个产品一个文件。`postgresql` 在 Debian 里是源码包名，
 # 二进制包是 `postgresql-16` 这类；归一后仍指向同一产品，版本在 version 层表达。
-product_id      = "sha256:517ce6b0f85174c48b68283038aab749"
+product_id      = "sha256:25ff2140fa111d87a51ff5716e20fa2f"
+canonical_id    = "postgresql/postgresql"
 canonical_name  = "postgresql"
 vendor          = "PostgreSQL Global Development Group"
 package_type    = "deb"
 homepage        = "https://www.postgresql.org/"
 lifecycle_state = "supported"
+categories      = ["database"]
+kind            = "daemon"
+default_ports   = [5432]
 
+
+provenance      = "measured"   # 实测：`postgres:16` 里 `postgresql-16=16.15-1.pgdg13+2` 命中
+verified_on     = ["docker-image@2026-11-07"]
+unverified      = ["recognize.path", "recognize.unit", "recognize.rpm", "recognize.apk"]
 aliases = ["postgres", "PostgreSQL"]
 
 external_ids = [
   { kind = "purl", value = "pkg:deb/debian/postgresql" },
   { kind = "cpe", value = "cpe:2.3:a:postgresql:postgresql" },
 ]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "dpkg"
+values   = ["postgresql-*", "postgresql-client-*", "postgresql-common"]
+strength = "strong"
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/lib/postgresql/*/bin/postgres", "/usr/bin/postgres", "/usr/pgsql-*/bin/postgres"]
+strength = "medium"
+
+[[recognize]]
+kind     = "unit"
+values   = ["postgresql.service", "postgresql@*.service", "postgresql-*.service"]
+strength = "strong"
+
+[[recognize]]
+kind     = "rpm"
+values   = ["postgresql-server", "postgresql*-server"]
+strength = "strong"

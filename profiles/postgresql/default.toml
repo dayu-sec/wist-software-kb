@@ -1,0 +1,19 @@
+# postgresql —— 通用部署画像（systemd 安装）
+product_id = "sha256:25ff2140fa111d87a51ff5716e20fa2f"
+form       = "default"
+
+[version_probe]
+kind = "package"
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "restart"      # 主版本升级还要 pg_upgrade，不只是一次重启
+config_paths       = ["/etc/postgresql", "/var/lib/postgresql/data/postgresql.conf"]
+data_paths         = ["/var/lib/postgresql"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["DatabaseService"]
+metric_faces = ["HostMetrics"]

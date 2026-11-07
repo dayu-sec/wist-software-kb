@@ -1,0 +1,53 @@
+# OpenJDK（运行时）
+#
+# 特殊之处：它是一个**运行时**，通常不监听端口，但几乎每个 Java 中间件都依赖它。
+# 用来验证范围里 C 档「应用运行时」这类目标怎么表达（以及会不会造成噪声）。
+product_id      = "sha256:83067f3c6b0560e215a963f786093fc7"
+canonical_id    = "openjdk/openjdk"
+canonical_name  = "openjdk"
+vendor          = "Oracle / Eclipse Adoptium / 各发行版"
+package_type    = "generic"
+homepage        = "https://openjdk.org/"
+lifecycle_state = "supported"
+categories      = ["runtime"]
+kind            = "runtime"
+default_ports   = []
+
+provenance      = "measured"   # 实测：`eclipse-temurin:21-jre` 的镜像名（suffix）+ java -version 命中
+verified_on     = ["docker-image@2026-11-07"]
+unverified      = ["recognize.dpkg", "recognize.rpm"]
+
+aliases = ["OpenJDK", "Java", "JRE", "JDK"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:generic/openjdk/openjdk" },
+  { kind = "purl", value = "pkg:deb/debian/openjdk-21-jre-headless" },
+  { kind = "cpe", value = "cpe:2.3:a:oracle:openjdk" },
+]
+
+# ── 识别判据（产品固有）───────────────────────────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/lib/jvm/*/bin/java", "/usr/bin/java"]
+strength = "strong"
+# **不要**把 `/opt/java/openjdk/bin/java` 写进来（2026-11-07 修正）。
+# 那是 Temurin 基础镜像的通用位置，任何 bundle 了 Temurin 的产品都会有它 ——
+# 实测 `apache/kafka:3.7.0` 就被误认成「kafka + openjdk」两个产品。
+# 那种情况是 `[[bundles]]`，不是独立安装（见 kafka / elasticsearch 的 bundles 块）。
+
+[[recognize]]
+kind     = "dpkg"
+values   = ["openjdk-*-jre*", "openjdk-*-jdk*"]
+strength = "strong"
+
+[[recognize]]
+kind     = "rpm"
+values   = ["java-*-openjdk", "java-*-openjdk-headless"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["eclipse-temurin", "openjdk", "amazoncorretto"]
+match    = "suffix"          # 官方 JDK 镜像本身就是这个产品
+strength = "medium"

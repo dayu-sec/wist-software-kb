@@ -1,0 +1,34 @@
+# wist-evidence —— 自有服务
+#
+# 实测：镜像 `dayu-sec/wist-evidence`，基镜像 Ubuntu 24.04，
+# 二进制 `/usr/local/bin/wist-evidence`，**不在任何包里**（COPY 进去的）。
+product_id      = "sha256:09199582cd520d2a11e2addfc186c0af"
+canonical_id    = "wist/evidence"
+canonical_name  = "wist-evidence"
+vendor          = "Wist"
+package_type    = "oci"
+lifecycle_state = "supported"
+categories      = ["application"]
+kind            = "daemon"
+default_ports   = []
+provenance      = "measured"
+verified_on     = ["docker-image@2026-11-07"]
+
+aliases = ["wist-evidence"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:oci/wist-evidence" },
+]
+
+# ── 识别判据（产品固有）───────────────────────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/wist-evidence"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["wist-evidence"]
+match    = "suffix"      # 否则 `wist-atlas` 会命中 `wist-atlas-web`
+strength = "medium"

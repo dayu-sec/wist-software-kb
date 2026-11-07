@@ -1,0 +1,20 @@
+product_id = "sha256:83067f3c6b0560e215a963f786093fc7"
+form       = "default"
+
+[version_probe]
+# 实测：输出在 stderr
+kind    = "binary"
+command = ["java", "-version"]
+stderr  = true
+
+[runtime]
+bind_scope = "none"                 # 运行时：不自己监听端口
+
+[governance]
+upgrade_mode       = "restart"      # 升级 JDK 必须重启依赖它的 JVM 进程
+config_paths       = []
+requires_privilege = "root"
+
+[observability]
+log_faces    = []
+metric_faces = []

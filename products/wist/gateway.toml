@@ -1,0 +1,34 @@
+# wist-gateway —— 自有服务
+#
+# 实测：镜像 `cloud/wist-gateway`，基镜像 Ubuntu 24.04，
+# 二进制 `/usr/local/bin/wist-gateway`，**不在任何包里**（COPY 进去的）。
+product_id      = "sha256:fd79f672180c77f29ec9ed83dc7943e8"
+canonical_id    = "wist/gateway"
+canonical_name  = "wist-gateway"
+vendor          = "Wist"
+package_type    = "oci"
+lifecycle_state = "supported"
+categories      = ["application", "web-server"]
+kind            = "daemon"
+default_ports   = []
+provenance      = "measured"
+verified_on     = ["docker-image@2026-11-07"]
+
+aliases = ["wist-gateway"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:oci/wist-gateway" },
+]
+
+# ── 识别判据（产品固有）───────────────────────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/wist-gateway"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["wist-gateway"]
+match    = "suffix"      # 否则 `wist-atlas` 会命中 `wist-atlas-web`
+strength = "medium"

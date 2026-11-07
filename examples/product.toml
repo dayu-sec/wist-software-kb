@@ -2,14 +2,25 @@
 #
 # 真实产品放 products/<ecosystem>/<product>.toml（一个产品一个文件）。
 #
-# `product_id` 必须是**确定性 id**，不能手写编号：
-#   product_id = "sha256:" + sha256(规范化 purl 去版本)[:32]
-# 规范化 = 去 `@版本`、去 `?qualifiers`、全小写。
+# ## 两个字段，一个来源
 #
-# 为什么这么严：客户域里的安装记录、漏洞命中都引用这个 id。id 一变，
-# 数百万条历史记录就悬空 —— 所以它必须能从 purl 重算出来（validate.py 会比对），
-# 也必须跟 purl 一起演进（改名走 `merged_into`，不是就地改）。
-product_id      = "sha256:808ec29dcf2e9c2c703a046c7d1bd276"
+#   canonical_id = "<vendor>/<name>"      ← **权威名**，人定，小写，定了不许改
+#   product_id   = "sha256:" + sha256(canonical_id)[:32]
+#
+# 为什么权威名不是 purl：purl 是「包在某个生态里的坐标」，不是产品身份。
+#   * 同一产品在不同生态名字不同：Debian `redis-server` / Alpine `redis` / 镜像 `redis`
+#   * 自研或没有发行版打包的软件**根本没有 purl**（只能手写 `pkg:generic/…`）
+#   * 用 purl 派生主键，等于把身份交给「当初在 external_ids 里写了哪一条」
+#
+# 所以 purl / CPE / 包名全部降级为**别名**，只用于「认出它是谁」，不参与 id 派生。
+#
+# ## 为什么 id 要变就得走声明
+#
+# 客户域里几百万条 installation / hit 都引用 product_id。改 canonical_id 会让它们悬空，
+# 所以必须走显式 rename（PR 标题带 `rename:`，描述里写清旧 id → 新 id）。
+# 改 aliases / external_ids 不受影响。
+canonical_id    = "f5/nginx"
+product_id      = "sha256:32c8d72f8c61e1b39fe3897cfb6c8815"
 canonical_name  = "nginx"
 vendor          = "F5"
 package_type    = "deb"
@@ -23,5 +34,6 @@ aliases = ["NGINX"]
 # 缺了桥就匹配不上漏洞，所以这是 PR 评审的重点。
 external_ids = [
   { kind = "purl", value = "pkg:deb/debian/nginx" },
+  { kind = "purl", value = "pkg:apk/alpine/nginx" },
   { kind = "cpe", value = "cpe:2.3:a:f5:nginx" },
 ]

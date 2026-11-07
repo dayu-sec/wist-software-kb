@@ -1,0 +1,299 @@
+# 10 单元 spike：模型合理性验证
+
+> 状态：**spike 结论**（2026-11-07），已按同日 review 的四条结论重构（见 §7）。
+> 目的：用 10 个真实单元 + 本机真实运行态，验证模型撑不撑得住。
+> 不追求覆盖，只追求**把模型的裂缝暴露出来**。
+
+---
+
+## 1. 做了什么
+
+| 产物 | 内容 |
+| --- | --- |
+| `products/` | 10 个产品身份（nginx、postgresql、mysql、redis、kafka、rabbitmq、elasticsearch、openjdk、victoria-metrics、warp-parse）。**权威名是 `canonical_id = <vendor>/<name>`**，`product_id` 由它重算校验；purl / CPE 只当别名 |
+| `products/` | 10 个产品：身份（`canonical_id`）+ 功能类别（多值 `categories`）+ `kind` + 默认端口 + **识别判据** `[[recognize]]`（带强度）+ `provenance` |
+| `profiles/` | 11 个部署画像：`[version_probe]` / `bind_scope` / `[governance]` / `[observability]`（同一产品可有多个：`postgresql/default` + `postgresql/k8s`） |
+| `scripts/validate.py` | 新增定义层闸门：`product_id` 引用、`category` 闭集、recognize 至少一条判据、通配防误匹配、端口合法性、`requires` 可解析 |
+| `scripts/recognize.py` | **判据③原型**：读 `products/` 的判据，对本机运行中的容器做真实匹配（dpkg / apk / rpm / 路径 / 镜像） |
+
+选单元的原则：**4 个本机真跑（可验证）+ 6 个中间件代表（压模型）**。
+
+---
+
+## 2. 实测结果
+
+```
+单元 10 个；容器 30 个
+包记录 2566 条，命中 34 条（1.3%）
+```
+
+| 单元 | 类别 | 本机样本 | 认出来的依据 |
+| --- | --- | --- | --- |
+| nginx | web-server | **10 个容器** | `apk:nginx` + `image` + `/usr/sbin/nginx` |
+| postgresql | database | **6 个容器** | `dpkg:postgresql-16=16.15-1.pgdg13+2` |
+| victoria-metrics | monitoring | **3 个容器** | `image` + `/victoria-metrics-prod`（**无包管理器**） |
+| warp-parse | pipeline | **2 个容器** | `image` + `/usr/local/bin/wparse`（**裸二进制**） |
+| redis / mysql / kafka / rabbitmq / elasticsearch / openjdk | — | 本机无样本 | — |
+
+**6 个本机没跑的单元，误报 0** —— 说明 recognize 规则没有互相污染（`mysql` 不会误吃 `postgresql` 的包）。
+
+这 6 个后来用官方镜像验了一遍（见 **F8**），**改掉了 5 条写错但看起来合理的规则**。
+现在 10 个产品都是 `provenance = "measured"`，但每个产品里没验到的判据逐条写进了 `unverified`：
+
+```
+products    10
+profiles    11（measured 10）
+            判据级未验证：nginx[dpkg/unit]、openjdk[dpkg/rpm]、…
+```
+
+同一台机器上 nginx 有三个版本同时存在：`1.26.3-r1` / `1.27.5-r1` / `1.31.8-r1`。这既证明「产品版本分布」是真实查询需求，也证明版本比较必须按生态分开。
+
+---
+
+## 3. 找到的裂缝（按严重度）
+
+### F1 · 包清单 ≠ 软件清单（最严重）
+
+**9 个未命中的容器全是我们自己的服务**（atlas / field-api / gateway / cred / evidence / ingest-ctrl），每个里有 **88–106 个包**，但**没有一个是「这个应用本身」** —— 因为我们把自己的 Rust 二进制 `COPY` 进 debian-slim，它不在任何包里。
+
+于是那 88–106 个包（`libssl3`、`ca-certificates`、`tzdata`…）全是基础镜像噪音。2566 条包记录里只有 34 条有意义（1.3%）。
+
+> 类比 `software-asset-scope.md` 的实测：713 个可执行里只有 29 个（4%）该进图谱。**这次是同一件事在容器侧的翻版：1.3%。**
+
+**结论**：「文件 → 包」这条判据只能覆盖**基础设施软件**（nginx / postgres / redis / jdk）。**业务应用自己**必须走另一条路（镜像 ref / 启动命令 / 进程 exe）—— 而这条路 `syft` / `trivy` 都不提供。
+
+### F2 · 通配必须允许出现在中间（原规则被现实否掉）
+
+我最初写的是「`*` 只允许在末尾」，被三条真实规则当场否掉：
+
+```
+openjdk-*-jre*                    # 包名嵌主版本
+/usr/lib/postgresql/*/bin/postgres  # 路径嵌版本目录
+postgresql@*.service              # systemd 模板实例
+```
+
+已改为：允许内嵌通配，但禁止以 `*` 开头、字面部分至少 3 字符（只写 `vm` 这种两字符会误匹配）、内嵌通配给警告（依赖命名约定，改版易失效）。
+
+### F3 · `package_type` 少了两个类型
+
+10 个单元里 **5 个既不是 deb 也不是 rpm/apk**（kafka、elasticsearch、openjdk、victoria-metrics、warp-parse）。purl 规范本身就有 `generic` 和 `oci` 两个 type —— 已补进词表，否则这 5 个连身份都写不出来。
+
+### F4 · 容器名不可靠，只能靠镜像
+
+本机同一个 victoria-metrics 镜像，容器名分别是 `metrics`（field 栈）、`vm`（gateway 栈）、`vm`（center 栈）。容器名是**部署者起的**，不是产品名。
+
+- `vm` 只有 2 个字符，会命中一切含 "vm" 的包名 → 已加最小长度约束；
+- 结论：`[recognize].containers` 只该在「部署约定固定」的场景用（如 k8s 的 pod 容器名），否则一律靠 `image`。
+
+### F5 · 「一个容器 = 多个软件」——**已证伪**
+
+最初我以为 `wist-field-stack-web` 是「我们的应用 + nginx」两个产品。同日验证后否定了：
+
+```
+$ docker exec wist-field-stack-web ps
+PID  1  nginx: master process nginx -g daemon off;
+     20+ nginx: worker process
+$ ls /usr/share/nginx/html   → assets/ index.html …
+```
+
+**容器里只有 nginx**。我们的前端是静态文件，没有第二个进程。
+
+所以「复合软件」在当前环境里不存在，`role`（subject / runtime / sidecar）也就没有驱动力。
+结论：**不建 N:N 关系**；一个容器里有多个软件只是采集副产品，没人会问。
+
+真正需要区分的只有「同一产品不同版本」（`wist-atlas:0.3.1` vs `:0.3.3-local`），那是版本层的事。
+
+### F6 · 版本有三个来源，且有坑
+
+| 来源 | 单元 | 备注 |
+| --- | --- | --- |
+| 包管理器 | nginx / postgresql / mysql / redis / rabbitmq / elasticsearch | 最可靠 |
+| 二进制 `-version` | openjdk / victoria-metrics / warp-parse | **`nginx -v`、`java -version` 输出到 stderr**，不是 stdout |
+| 镜像 tag | kafka / victoria-metrics / warp-parse（兜底） | tag 会被改（`:latest`），且不等于包版本 |
+
+所以 `[version_probe]` 必须有 `kind` + `fallback`，且允许 `stderr = true`。已在 10 个单元里全部写明。
+
+### F7 · 单元模型能表达「不监听端口的运行时」
+
+`openjdk` 的 `bind_scope = "none"`、`ports = []`，validate 通过了。这证明模型能容纳「没有端口」的软件。
+
+**但反过来暴露一个风险**：`software-asset-scope.md` 的 A 档判据是「持有监听端口」。如果按端口筛，openjdk 永远进不了图谱 —— 而几乎每个 Java 中间件都依赖它。所以 **A 档不能是唯一入口**，必须同时允许「被其他进图谱的单元依赖」。
+
+### F8 · 官方镜像普遍**不打包自己**（最反直觉的一条）
+
+把 6 个 `inferred` 单元逐个拉官方镜像验一遍（`docker.m.daocloud.io` 镜像源），结果：
+
+| 镜像 | 包管理器 | 有“本软件”的包吗 | 软件实际在哪 |
+| --- | --- | --- | --- |
+| `redis:7-alpine` | apk | ❌ `apk info -v` 里**没有任何 redis 包** | `/usr/local/bin/redis-server` |
+| `eclipse-temurin:21-jre` | **无**（dpkg 被剥掉） | ❌ | `/opt/java/openjdk/bin/java` |
+| `mysql:8` | **rpm**（Oracle Linux 9） | ✅ `mysql-community-server-minimal-8.4.13` | `/usr/sbin/mysqld` |
+| `rabbitmq:3` | **无** | ❌ | `/opt/rabbitmq/sbin/rabbitmq-server` |
+| `apache/kafka:3.7.0` | apk | ❌（kafka 是解包的 tarball） | `/opt/kafka` |
+| `elasticsearch:8.13.0` | dpkg | ❌ 包里没有 elasticsearch | `/usr/share/elasticsearch` |
+
+**6 个里只有 1 个（mysql）是靠包名认出来的。**
+
+这把 F1 从「我们自己服务的特例」升级成了通则：
+
+> **「包名判据」只在「发行版安装」场景成立。容器场景下，软件几乎总是一个解包到 `/opt` 或 `/usr/share` 的 tarball，或一个静态二进制。**
+
+所以 `[recognize]` 里 **`binaries` / `image` 必须是主判据**，包名只是「有则更好」。
+
+这轮实测还改掉了五处**写错但看起来合理**的规则：
+
+| 单元 | 原来写的 | 实测真相 |
+| --- | --- | --- |
+| redis | `apk = ["redis"]` | 官方镜像不走 apk，二进制在 `/usr/local/bin` |
+| mysql | `rpm = ["mysql-community-server"]` | 实际叫 `mysql-community-server-**minimal**`，精确名匹配不上 |
+| mysql | 以 `dpkg` 为主判据 | 官方镜像是 Oracle Linux，用 **rpm** |
+| rabbitmq | `/usr/sbin/rabbitmq-server` | 实际在 `/opt/rabbitmq/sbin/` |
+| openjdk | `/usr/lib/jvm/*/bin/java`、`/usr/bin/java` | temurin 只有 `/opt/java/openjdk/bin/java` |
+| rabbitmq | `rabbitmq-server --version` | **会真把服务起起来**，得从 `plugins/rabbit_common-<ver>` 读 |
+
+这六条里有五条是「按惯例写得很像，但在真实镜像里一条都不中」—— 这就是 `provenance` 存在的理由。
+
+---
+
+## 4. 合理性判断
+
+**结论：形状站得住，但判据的权重需要重排。**
+
+| 判断项 | 结果 |
+| --- | --- |
+| 「一个产品一个定义文件」 | ✅ 10 个单元没有一处需要破格表达 |
+| `product_id` 作为唯一连接点 | ✅ 校验能当场发现断链，引用很稳 |
+| `[recognize]` 能表达多样部署形态 | ✅ 包名 / 路径 / unit / 容器 / 镜像 五种判据覆盖了全部 10 个 |
+| `category` 闭集够用 | ⚠️ `monitoring` / `pipeline` 是我临时加的，需要你确认要不要保留 |
+| 判据覆盖度 | ❌ 只覆盖「基础设施软件」；**业务应用自己完全覆盖不到**（F1） |
+| 容器 ↔ 软件关系 | ✅ 不需要（F5 已证伪：没有复合软件） |
+
+**最需要改的一件事**：把 `[recognize]` 里 `binaries` / `image` 从「补充判据」提升为**主判据**。因为本机 5/10 的单元根本没有包可查，而这 5 个恰恰是「业务应用」和「中间件」—— 正是图谱真正要管的东西。
+
+---
+
+## 5. 决策结果（2026-11-07）
+
+| 问题 | 结论 |
+| --- | --- |
+| 自研软件进不进知识库 | **进**。7 个服务已入库（`wist/atlas`、`center`、`cred`、`evidence`、`field-api`、`gateway`、`ingest-ctrl`），均实测于本机镜像 |
+| `categories` 闭集 | **收缩 + 补一格**：删 `monitoring`（并入 database）/ `security`（与 vendor 重复）/ `gateway`（与 web-server 重合）；**新增 `application`** |
+| 容器 ↔ 多软件 | **不建模**。F5 已证伪：web 容器里只有 nginx，不存在第二个产品 |
+| web 镜像算不算独立产品 | **不算**。它们是 nginx + 静态文件，没有自己的进程 |
+
+### `categories` 的判定规则（可复用）
+
+> 一个类别值必须绑定一个**不同的动作或查询**。
+> 检验：把 `category = X` 换成别的值，系统行为会变吗？不变 → 删掉它。
+
+按此得到最终闭集：
+
+```
+database  cache  message-queue  search  web-server  runtime  pipeline  application  unknown
+```
+
+`application` 为什么必须新开一格 —— 它与中间件的**动作真的不同**：
+
+| | 中间件 | 业务应用 |
+| --- | --- | --- |
+| 版本来源 | 包 | 镜像 tag |
+| 上游公告 | 大量 | 几乎没有 |
+| 升级 | restart / reload | 滚动替换 |
+| 采集面 | DatabaseService 等 | 只有 stdout |
+
+> 推论：**如果某值长期停在 `unknown`，说明闭集缺一格**，而不是数据没填。
+> `validate.py` 会把 `categories == ["unknown"]` 的产品列出来。
+
+### `requires` 的粒度（已定）
+
+结论：**不会膨胀，保留字段，但收紧语义。**
+
+| 层 | 例子 | 数量级 | 归属 |
+| --- | --- | --- | --- |
+| **产品级静态依赖** | elasticsearch 需要 JDK | 产品数 × 出度 ≈ 千级边 | KB 的 `requires` |
+| 运行期实际依赖 | 这台机用的哪个 JVM | 主机 × 进程，百万级 | 客户域采集 |
+| 部署拓扑依赖 | 服务依赖哪个数据库 | 服务 × 边 | atlas `runtime_binding` |
+
+膨胀只会在后两层发生。所以 `requires` 只表达「**必须有外部提供的运行时**」（JDK / Erlang），
+不表达「需要数据库」，也不表达「自带」—— 详见 `products/README.md`。
+
+顺带查出一个错：`elasticsearch` 原来写着 `requires = ["openjdk/openjdk"]`，
+但实测镜像**自带 JDK**（`/usr/share/elasticsearch/jdk/bin/java`）。已删除。
+
+### `bundles`（自带运行时，已定）
+
+实测两个形态：
+
+| 产品 | 自带 | 路径 | 后果 |
+| --- | --- | --- | --- |
+| kafka:3.7.0 | Temurin 21.0.2 | `/opt/java/openjdk/bin/java` | 原先被误报成「kafka + openjdk」两个产品 |
+| elasticsearch:8.13.0 | JDK 22 | `/usr/share/elasticsearch/jdk/bin/java` | 原先完全看不见（静默盲区） |
+
+定下的形态：`[[bundles]]` + **探测**（不写死版本），并顺带收紧 openjdk 判据：
+
+- 删掉 `/opt/java/openjdk/bin/java` —— 它是 Temurin 基础镜像的通用位置，不是「独立安装」的证据；
+- openjdk 改用 `/usr/lib/jvm/*/bin/java` + `/usr/bin/java` + 镜像名（suffix）；
+- 新增闸门：**bundles 的探测路径不能同时是它的识别判据**。
+
+验证结果：
+
+```
+tmp-kafka → kafka                        └ bundles openjdk/openjdk v21.0.2
+tmp-es    → elasticsearch                └ bundles openjdk/openjdk v22
+```
+
+仍开放：bundled 运行时的 CVE 要不要在外层产品的命中里体现（`via = "bundled:…"`），
+这是导入器侧的决定。
+
+### 仍开放
+
+1. **`versions/`**：设计里有这层，仓里还没建（目前版本只隐式存在于 advisory 的区间里）。
+   已定边界：版本是**值**不是知识，所以 `versions/` 只能是「EOL 例外」这类小表；
+   比较器是代码（放 atlas），跨生态版本翻译第一版不做（已知假阴性）。
+
+---
+
+## 6. 模型重构（同日 review 后）
+
+review 出五个结构问题，拍定了四条，已全部落地：
+
+| 决定 | 落地 |
+| --- | --- |
+| **P0 → 窄而准**：KB 只收「有定义的产品」的公告，不做情报镜像 | 已写入 README / `software-knowledge-repo.md`；`bulk` 只拉与已定义包名相关的分片 |
+| **拆成两层**：产品固有 vs 部署画像 | `products/` 带判据，`profiles/` 带策略（最终 17 个产品 / 18 个 profile） |
+| **`category` → 多值** | `categories = ["search", "database"]`，并把「运行时/采集器」抽成独立的 `kind` |
+| **判据加强度** | `[[recognize]]` 每条带 `strength = strong/medium/weak` |
+
+### 重构中踩到的坑（值得记）
+
+第一次拆的时候，我把 `[[recognize]]` 也放进了 profile。结果 **`nginx/deb` 也命中了 10 个 Alpine 容器** —— 因为 `/usr/sbin/nginx` 和 `nginx.service` 本来就不随装法变。
+
+这说明：**判据是产品固有属性，只有治理策略是部署相关的**。错位后 profile 变成了假的维度，
+同一份产品会被重复认领。修正后：
+
+```
+products/  它是谁 + 怎么认（包名 / 路径 / unit / 镜像，带强度）
+profiles/  认出之后怎么管（version_probe / bind_scope / upgrade_mode / config_paths）
+```
+
+### 重构后的闸门新增项
+
+| 规则 | 作用 |
+| --- | --- |
+| `categories` 非空且全在闭集内 | 多值但不许发明值；`["unknown"]` 会被单独列成「待归类」 |
+| `kind` 在闭集内 | 与 categories 正交的第二维 |
+| `[[recognize]]` 每条必须有 `kind` + `values` + `strength` | 不再允许「一条无强度的模糊规则」 |
+| **同一观测（如 `dpkg:nginx`）只能属于一个产品** | 拓住「一个产品裂成两条」和「mariadb 被当成 mysql」 |
+| `container` 判据标非 `weak` → 告警 | 实测容器名不可靠 |
+| `image` 判据标 `strong` → 告警 | 子串匹配（`nginx` 会命中 `nginx-ingress`） |
+| `(product_id, form)` 唯一 | 同形态不许重复定义 |
+
+---
+
+## 7. 怎么重跑
+
+```sh
+cd wist-software-kb
+python3.12 scripts/validate.py                    # 闸门：10 products / 11 profiles
+python3.12 scripts/recognize.py --docker --all    # 对本机容器实测匹配
+```

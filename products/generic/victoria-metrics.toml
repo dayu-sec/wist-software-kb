@@ -1,0 +1,42 @@
+# VictoriaMetrics
+#
+# 本机实跑（wist 自己的指标后端）。**静态二进制，镜像里没有任何包管理器** ——
+# 这是「文件 → 包」判据失效的最典型情形：只能靠二进制路径 + `-version` 或镜像 tag。
+product_id      = "sha256:e0b0479fa204d24a092d5e918203508f"
+canonical_id    = "victoriametrics/victoria-metrics"
+canonical_name  = "victoria-metrics"
+vendor          = "VictoriaMetrics"
+package_type    = "oci"
+homepage        = "https://victoriametrics.com/"
+lifecycle_state = "supported"
+categories      = ["database"]
+kind            = "daemon"
+default_ports   = [8428]
+
+
+provenance      = "measured"   # 实测：`victoria-metrics:v1.154.0` 里 /victoria-metrics-prod + 镜像名命中（无包管理器）
+verified_on     = ["wist-field-stack@2026-11-07", "docker-image@2026-11-07"]
+unverified      = ["recognize.unit", "version_probe"]
+aliases = ["VictoriaMetrics", "victoria-metrics", "victoria-metrics-prod"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:generic/victoriametrics/victoria-metrics" },
+  { kind = "purl", value = "pkg:oci/victoriametrics/victoria-metrics" },
+]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/victoria-metrics-prod", "/usr/local/bin/victoria-metrics-prod"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["victoriametrics/victoria-metrics"]
+strength = "medium"
+
+[[recognize]]
+kind     = "unit"
+values   = ["victoriametrics.service", "victoria-metrics.service"]
+strength = "strong"

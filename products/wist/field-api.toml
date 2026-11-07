@@ -1,0 +1,34 @@
+# wist-field-api —— 自有服务
+#
+# 实测：镜像 `dayu-sec/wist-field-api`，基镜像 Ubuntu 24.04，
+# 二进制 `/usr/local/bin/wist-field-api`，**不在任何包里**（COPY 进去的）。
+product_id      = "sha256:e40e4a2ba7d25f13da50ff401fa541bf"
+canonical_id    = "wist/field-api"
+canonical_name  = "wist-field-api"
+vendor          = "Wist"
+package_type    = "oci"
+lifecycle_state = "supported"
+categories      = ["application"]
+kind            = "daemon"
+default_ports   = []
+provenance      = "measured"
+verified_on     = ["docker-image@2026-11-07"]
+
+aliases = ["wist-field-api"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:oci/wist-field-api" },
+]
+
+# ── 识别判据（产品固有）───────────────────────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/wist-field-api"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["wist-field-api"]
+match    = "suffix"      # 否则 `wist-atlas` 会命中 `wist-atlas-web`
+strength = "medium"

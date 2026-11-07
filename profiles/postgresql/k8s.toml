@@ -1,0 +1,22 @@
+# postgresql —— k8s 形态：**同一产品，策略完全不同**（这就是拆 profile 的理由）
+# 在 k8s 里没有 systemd unit 可 reload/restart，只能换 Pod（滚动），
+# 配置来自 ConfigMap 而不是本机文件，监听范围由 Service 决定。
+product_id = "sha256:25ff2140fa111d87a51ff5716e20fa2f"
+form       = "k8s"
+
+[version_probe]
+kind     = "image_tag"              # 容器镜像 tag，不是包版本
+fallback = { kind = "package" }
+
+[runtime]
+bind_scope = "internal"             # 只对集群内暴露，外部由 Ingress 决定
+
+[governance]
+upgrade_mode       = "rolling"
+config_paths       = []             # ConfigMap / Secret，不落在本机
+data_paths         = ["/var/lib/postgresql/data"]   # PVC
+requires_privilege = "none"
+
+[observability]
+log_faces    = ["DatabaseService", "ComputeWorkload"]
+metric_faces = ["HostMetrics"]

@@ -1,0 +1,19 @@
+product_id = "sha256:3619142294bee60cc3e1c08f5f49e0a3"
+form       = "default"
+
+[version_probe]
+kind     = "binary"
+command  = ["wparse", "--version"]
+fallback = { kind = "image_tag" }
+
+[runtime]
+bind_scope = "internal"
+
+[governance]
+upgrade_mode       = "restart"
+config_paths       = ["/opt/wparse", "/etc/wparse"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["ComputeWorkload"]
+metric_faces = ["HostMetrics"]

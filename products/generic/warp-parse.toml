@@ -1,0 +1,38 @@
+# WarpParse
+#
+# wist 自己的日志解析引擎。**没有任何公开上游**：不在 OSV 里、没有 CPE、没有 purl 生态。
+# 用它验证两件事：
+#   1. 自研软件的身份从哪里来（只能靠 overlay / 私有定义）；
+#   2. 「有定义、没有漏洞源」这种组合，模型能不能表达。
+product_id      = "sha256:3619142294bee60cc3e1c08f5f49e0a3"
+canonical_id    = "wist/warp-parse"
+canonical_name  = "warp-parse"
+vendor          = "wp-labs"
+package_type    = "oci"
+homepage        = "https://github.com/wp-labs/warp-parse"
+lifecycle_state = "supported"
+categories      = ["pipeline"]
+kind            = "daemon"
+default_ports   = []
+
+
+provenance      = "measured"   # 实测：`warp-parse:0.35.3-alpha` 里 /usr/local/bin/wparse + 镜像名命中
+verified_on     = ["docker-image@2026-11-07"]
+aliases = ["WarpParse", "wparse", "warp-parse"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:generic/wp-labs/warp-parse" },
+  { kind = "purl", value = "pkg:oci/wp-labs/warp-parse" },
+]
+
+# ── 识别判据（产品固有：换装法也基本成立）───────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/wparse", "/usr/local/bin/wpadm"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["wp-labs/warp-parse"]
+strength = "medium"

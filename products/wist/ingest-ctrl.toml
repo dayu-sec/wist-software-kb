@@ -1,0 +1,34 @@
+# wist-ingest-ctrl —— 自有服务
+#
+# 实测：镜像 `dayu-sec/wist-ingest-ctrl`，基镜像 Debian 12，
+# 二进制 `/usr/local/bin/wist-ingest-ctrl`，**不在任何包里**（COPY 进去的）。
+product_id      = "sha256:d52d9da5229880e7e8c7a51e795dd3c7"
+canonical_id    = "wist/ingest-ctrl"
+canonical_name  = "wist-ingest-ctrl"
+vendor          = "Wist"
+package_type    = "oci"
+lifecycle_state = "supported"
+categories      = ["application"]
+kind            = "daemon"
+default_ports   = []
+provenance      = "measured"
+verified_on     = ["docker-image@2026-11-07"]
+
+aliases = ["wist-ingest-ctrl"]
+
+external_ids = [
+  { kind = "purl", value = "pkg:oci/wist-ingest-ctrl" },
+]
+
+# ── 识别判据（产品固有）───────────────────────────────────────────
+
+[[recognize]]
+kind     = "path"
+values   = ["/usr/local/bin/wist-ingest-ctrl"]
+strength = "strong"
+
+[[recognize]]
+kind     = "image"
+values   = ["wist-ingest-ctrl"]
+match    = "suffix"      # 否则 `wist-atlas` 会命中 `wist-atlas-web`
+strength = "medium"

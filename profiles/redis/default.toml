@@ -1,0 +1,20 @@
+product_id = "sha256:bf451cb8534506146c500b697ffc964a"
+form       = "default"
+
+[version_probe]
+kind     = "binary"
+command  = ["redis-server", "--version"]
+fallback = { kind = "package" }
+
+[runtime]
+bind_scope = "public"
+
+[governance]
+upgrade_mode       = "restart"
+config_paths       = ["/etc/redis/redis.conf"]
+data_paths         = ["/var/lib/redis"]
+requires_privilege = "root"
+
+[observability]
+log_faces    = ["DatabaseService"]
+metric_faces = ["HostMetrics"]
