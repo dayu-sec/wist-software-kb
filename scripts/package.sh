@@ -100,7 +100,7 @@ find "${DEST}" \( -name .DS_Store -o -name .gitkeep -o -name __pycache__ -o -nam
 
 # manifest.json：让包自描述（导入侧不解包也知道版本与内容摘要）。
 python3 - "${ROOT}" "${DEST}" "${VERSION}" <<'PY'
-import hashlib, json, pathlib, subprocess, sys
+import hashlib, json, os, pathlib, subprocess, sys
 from datetime import datetime, timezone
 
 root, dest, version = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), sys.argv[3]
@@ -119,6 +119,25 @@ try:
 except Exception:
     commit = ""
 
+# created_at 必须**可复现**：同一 commit 重建的包要逐字节一致（否则 sha256 变、签名变，
+# `kb_state.pack_sha256` 就失去“是不是同一份”的意义）。
+#   优先 SOURCE_DATE_EPOCH（可复现构建惯例），否则取 HEAD 的提交时间，都没有才用当前时间。
+def build_time() -> str:
+    epoch = os.environ.get("SOURCE_DATE_EPOCH", "").strip()
+    if epoch.isdigit():
+        return datetime.fromtimestamp(int(epoch), timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if commit:
+        try:
+            raw = subprocess.run(
+                ["git", "-C", str(root), "log", "-1", "--format=%cI"],
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+            iso = datetime.fromisoformat(raw)
+            return iso.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        except Exception:
+            pass
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
 files = {}
 for path in sorted(dest.rglob("*")):
     if path.is_file():
@@ -132,7 +151,7 @@ manifest = {
     "name": "wist-software-kb",
     "version": version,
     "kb_version": f"{version}+sha256:{content_hash[:32]}",
-    "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    "created_at": build_time(),
     "commit": commit,
     "counts": {
         "products": count("products", "*.toml"),
@@ -147,7 +166,13 @@ PY
 
 mkdir -p "${OUT}"
 rm -f "${TARBALL}" "${TARBALL}.sha256" "${TARBALL}.sig"
-tar -czf "${TARBALL}" -C "${STAGE}" "${PACKAGE}"
+
+# 可复现构建：mtime 全部钉死 + 条目按路径排序 + gzip 不写时间戳。
+# 否则 tar/gzip 会写入“什么时候拷贝的”、目录遍历顺序和当前时间 ——
+# 同一份内容两次打包 sha256 就不同，签名也跟着变。
+find "${STAGE}" -exec touch -h -t 198001010000 {} +
+( cd "${STAGE}" && find "${PACKAGE}" | LC_ALL=C sort | tar -cf - -T - --no-recursion | gzip -n ) >"${TARBALL}"
+
 SHA="$(sha256_of "${TARBALL}")"
 printf '%s  %s\n' "${SHA}" "$(basename "${TARBALL}")" >"${TARBALL}.sha256"
 

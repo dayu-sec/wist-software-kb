@@ -16,6 +16,9 @@
 - `scripts/validate.py`：schema、引用完整性、区间语法、`product_id` 重算一致性、体量（GitHub 硬限）。
 - `scripts/package.sh`：白名单打包 → `dist/wist-software-kb-<ver>.tar.gz` + `.sha256`（+ `.sig`），
   包内自带 `manifest.json`（版本、内容摘要、`kb_version`、各层计数、commit）。
+  **确定性构建**：同一 commit 重建的包逐字节一致（mtime 钉死、条目 `LC_ALL=C sort`、
+  `gzip -n`、`created_at` 取提交时间或 `SOURCE_DATE_EPOCH`）—— 否则 `pack_sha256` 会变成
+  「谁在哪天签的」，而不是「是不是同一份内容」。
 - `scripts/gen-signing-key.sh`：Ed25519 密钥对（私钥进 CI secret，公钥进 `keys/`）。
 - CI：PR/push 跑校验 + 打包 dry-run；tag `v*.*.*` 打包、签名、发 GitHub Release。
 - `Makefile`：`validate` / `dry-run` / `pack` / `signing-key` / `clean`。
