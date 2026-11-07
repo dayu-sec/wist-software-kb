@@ -1,7 +1,2 @@
-# 目录占位：curated advisory 放这里（`advisories/curated/<osv_id>.toml`）。
-
-真实公告从 `bulk/`（OSV / NVD / 发行版 tracker）来。本目录只放**人工修订**：
-区间不准、别名缺失、供应商公告需要补充的情况。每条都要能对上 bulk 里的 `osv_id`，
-否则就是「我们自己发明了一条公告」—— PR 里必须说明理由。
-
-格式见 `../../examples/advisory.toml`。
+curated advisory 放这里（advisories/curated/<osv_id>.toml）。
+现在为空 —— 空目录靠本文件占位；格式见 ../README.md。

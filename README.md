@@ -19,8 +19,7 @@ version.txt                     # 版本权威（gx adm v_patch / v_feat 改它�
 kb.toml                         # schema_version / kb_version / 数据源与许可证
 products/<product>.toml         # curated：产品固有（权威名 + 类别 + 识别判据）
 profiles/<product>/<form>.toml  # curated：部署画像（认出之后怎么管）—— 见 profiles/README.md
-advisories/<source>/…           # curated：人工修正、供应商公告
-bulk/                           # 上游镜像分片（机器生成，别手改）
+advisories/<source>/…           # curated：人工修正、供应商公告（现在为空，见其 README）
 scripts/                        # validate.py / package.sh / gen-signing-key.sh
 scripts/dev/recognize.py        # dev 工具：改判据后对真实镜像做回归（需要 Docker）
 docs/                           # 决策记录（spike-2026-11.md）
@@ -28,9 +27,11 @@ keys/                           # 内容签名公钥（私钥只在 CI secret）
 _gal/                           # gx 工作区：gx adm v_patch | v_feat | tag_alpha | tag_beta | tag_stable
 ```
 
-> 没有 `schemas/` 和 `examples/`（2026-11-07 删）。
-> 前者过期且无人使用，后者会随模型变而腐化 —— **闸门 `scripts/validate.py` 是唯一事实来源**，
-> 新加产品直接照 `products/nginx.toml` 抄（真实文件有 CI 守着）。
+> 没有 `schemas/`、`examples/`、`bulk/`（2026-11-07 删）。
+> `schemas/` 过期且无人使用，`examples/` 会随模型变而腐化 —— **闸门 `scripts/validate.py`
+> 是唯一事实来源**，新加产品直接照 `products/nginx.toml` 抄（真实文件有 CI 守着）。
+> `bulk/` 是**机器生成**的镜像层（和 `dist/` 同类），生成器还不存在，等导入器开工时再建，
+> 届时大概率也走 gitignore + 打包时生成。
 
 本地入口是 `Makefile`：`make validate` / `make dry-run` / `make pack`（详见下方 CI 一节）。
 
@@ -84,14 +85,16 @@ profiles    11（measured 10）
 完整字段与纪律见 [`profiles/README.md`](profiles/README.md)；
 模型为什么长成现在这样、以及 10 个产品的实测结果，见 [`docs/spike-2026-11.md`](docs/spike-2026-11.md)。
 
-## 两级
+## 两层：curated 与 bulk
 
-| 层 | 谁写 | 形态 | 覆盖关系 |
-| --- | --- | --- | --- |
-| **curated** | 人（PR） | 一对象一文件 TOML | **覆盖** bulk |
-| **bulk** | CI 定时拉 OSV / NVD / 发行版 tracker | 按源 + 年份/首字母分片 JSONL | 被 curated 覆盖 |
+**现在仓里只有 curated。** `bulk/`（上游镜像）是机器生成的，暂未建，理由见上方目录表下的说明。
 
-同一个 `osv_id` 两边都有时，curated 胜（人工修正优先，PR 里要写理由）。
+| 层 | 谁写 | 形态 | 覆盖关系 | 现在有吗 |
+| --- | --- | --- | --- | --- |
+| **curated** | 人（PR） | 一对象一文件 TOML | **覆盖** bulk | ✅ |
+| **bulk** | 机器（从上游已整理好的产物转换） | 按源 + 年份分片 JSONL | 被 curated 覆盖 | ❌ 待导入器 |
+
+将来同一个 `osv_id` 两边都有时，curated 胜（人工修正优先，PR 里要写理由）。
 
 ## 提交一个新软件
 
@@ -130,7 +133,7 @@ wist-atlas kb import --pack /path/wist-software-kb-<ver>.tar.gz [--overlay /etc/
 ## 许可证与出处
 
 - 本仓内容：Apache-2.0（见 `LICENSE`）；
-- bulk 层按源记录许可证（见 `kb.toml` 的 `[sources]`）：**只存 id / 区间 / 链接，不转存全文**；
+- 将来 bulk 层按源记录许可证（见 `kb.toml` 的 `[sources]`）：**只存 id / 区间 / 链接，不转存全文**；
 - 引用外部数据时保留 `source` 与 `references`，这是 CI 闸门的一部分。
 
 ## CI

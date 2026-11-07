@@ -9,8 +9,9 @@
 
 ### 新增
 
-- 仓结构：`products/`（curated 产品）、`advisories/`（curated 公告修正）、`bulk/`（CI 拉的原始分片）、
-  `scripts/`、`keys/`。
+- 仓结构：`products/`（产品固有 + 识别判据）、`profiles/`（部署画像）、
+  `advisories/`（人工修正的公告，现为空）、`scripts/`、`keys/`。
+  `bulk/`（上游镜像）暂未建 —— 机器生成，等导入器与生成器一起做。
 - 两个示范产品：`nginx`（deb）、`postgresql`（deb）。`product_id` 由 purl 确定性派生，
   不是手写编号。
 - `scripts/validate.py`：schema、引用完整性、区间语法、`product_id` 重算一致性、体量（GitHub 硬限）。
@@ -30,5 +31,5 @@
 - **KB 是公共的，客户数据是私有的**：本仓不含任何主机、IP、安装路径、命中结果；
   客户侧的自定义产品走本地 overlay，单向流入，永不回写。
 - **`product_id` / `version_id` / `advisory_id` 必须可重算**，改名走 `merged_into` 而不是就地改 id。
-- bulk 层**只存 id / 区间 / 链接**，不转存公告全文（合规与体量）。
+- 将来 bulk 层**只存 id / 区间 / 链接**，不转存公告全文（合规与体量）。
 - 版本比较必须用生态比较器（dpkg 的 `~` 与 epoch、rpm 段序、semver），禁止字符串比较。

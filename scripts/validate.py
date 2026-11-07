@@ -572,7 +572,10 @@ def main() -> int:
     if unclassified:
         print(f"            待归类（categories 只有 unknown）：{'、'.join(sorted(unclassified))}")
     print(f"advisories  {len(advisory_ids)}（curated）")
-    print(f"bulk        {bulk_records} 行")
+    if BULK.exists():
+        print(f"bulk        {bulk_records} 行")
+    else:
+        print("bulk        未建（机器生成的镜像层，等导入器与生成器）")
 
     if warnings:
         print("\n警告：")

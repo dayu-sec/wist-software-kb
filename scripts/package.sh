@@ -22,7 +22,7 @@ VERSION=""
 DRY_RUN=0
 
 # 进包的内容 = **白名单**，不是 `*`（仓里以后多出别的东西不该被顺手打进制品）。
-CONTENT=(kb.toml products profiles advisories bulk)
+CONTENT=(kb.toml products profiles advisories)
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
